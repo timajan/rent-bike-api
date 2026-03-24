@@ -1,0 +1,42 @@
+# dependencies
+node_modules/
+
+# environment variables
+.env
+.env.*
+!.env.example
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# build / coverage
+dist/
+build/
+coverage/
+
+# runtime files
+.tmp/
+temp/
+tmp/
+
+# Sequelize / database artifacts
+*.sqlite
+*.sqlite3
+
+# misc
+*.pid
+*.seed
