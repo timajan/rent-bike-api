@@ -5,6 +5,7 @@ const { sequelize } = require('./models');
 const bikeRoutes = require('./routes/bikes');
 const stationRoutes = require('./routes/stations');
 const bookingRoutes = require('./routes/bookings');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 app.use(express.json());
@@ -13,6 +14,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'Bike rental API is running' });
 });
 
+app.use('/auth', authRoutes);
 app.use('/bikes', bikeRoutes);
 app.use('/stations', stationRoutes);
 app.use('/bookings', bookingRoutes);

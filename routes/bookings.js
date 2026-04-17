@@ -23,6 +23,10 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ error: 'Bike not found' });
     }
 
+    if (bike.status !== 'available') {
+      return res.status(400).json({ error: 'Bike is not available for booking' });
+    }
+
     const start = new Date(start_time);
     const end = new Date(end_time);
     const hours = Math.ceil((end - start) / (1000 * 60 * 60));
