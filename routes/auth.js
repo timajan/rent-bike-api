@@ -16,6 +16,46 @@ const router = express.Router();
 
 const loginAttempts = {};
 
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+
+const avatarsDir = path.join(__dirname, '..', 'uploads', 'avatars');
+
+if (!fs.existsSync(avatarsDir)) {
+  fs.mkdirSync(avatarsDir, { recursive: true });
+}
+
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, avatarsDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const fileName = `user-${req.user.id}-${Date.now()}${ext}`;
+    cb(null, fileName);
+  },
+});
+
+const avatarFileFilter = (req, file, cb) => {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only JPG, PNG and WEBP images are allowed'), false);
+  }
+};
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  fileFilter: avatarFileFilter,
+  limits: {
+    fileSize: 2 * 1024 * 1024,
+  },
+});
+
 function generateAccessToken(user) {
   return jwt.sign(
     {
@@ -256,7 +296,7 @@ router.post('/logout', (req, res) => {
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'name', 'email', 'role', 'created_at'],
+      attributes: ['id', 'name', 'email', 'role', 'avatar', 'created_at'],
     });
 
     if (!user) {
@@ -304,6 +344,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        avatar: user.avatar,
       },
     });
   } catch (error) {
@@ -370,5 +411,53 @@ router.delete('/users/:id', authMiddleware, roleMiddleware('admin'), async (req,
 router.get('/admin', authMiddleware, roleMiddleware('admin'), (req, res) => {
   res.json({ message: 'Access granted for admin only' });
 });
+
+
+router.patch(
+  '/profile/avatar',
+  authMiddleware,
+  avatarUpload.single('avatar'),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'Avatar file is required' });
+      }
+
+      const user = await User.findByPk(req.user.id);
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (user.avatar) {
+        const oldAvatarPath = path.join(__dirname, '..', user.avatar);
+
+        if (fs.existsSync(oldAvatarPath)) {
+          fs.unlinkSync(oldAvatarPath);
+        }
+      }
+
+      const avatarPath = `uploads/avatars/${req.file.filename}`;
+
+      await user.update({
+        avatar: avatarPath,
+      });
+
+      res.json({
+        message: 'Avatar updated successfully',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          avatar: user.avatar,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
 
 module.exports = router;

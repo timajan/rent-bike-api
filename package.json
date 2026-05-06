@@ -6,6 +6,25 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "raw": "node raw-queries-demo.js"
+    "raw": "node raw-queries-demo.js",
+    "pm2": "pm2 start server.js --name rent-bike-api",
+    "pm2:logs": "pm2 logs rent-bike-api",
+    "pm2:monit": "pm2 monit"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
+    "express-validator": "^7.3.2",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.14.0",
+    "sequelize": "^6.37.3",
+    "uuid": "^13.0.0",
+    "morgan": "^1.10.0",
+    "winston": "^3.17.0",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }
