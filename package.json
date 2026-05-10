@@ -9,7 +9,11 @@
     "raw": "node raw-queries-demo.js",
     "pm2": "pm2 start server.js --name rent-bike-api",
     "pm2:logs": "pm2 logs rent-bike-api",
-    "pm2:monit": "pm2 monit"
+    "pm2:monit": "pm2 monit",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "load:test": "artillery run artillery.yml",
+    "start:docker": "docker compose up --build"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -22,9 +26,18 @@
     "uuid": "^13.0.0",
     "morgan": "^1.10.0",
     "winston": "^3.17.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "helmet": "^8.0.0",
+    "express-rate-limit": "^7.5.0",
+    "cors": "^2.8.5",
+    "compression": "^1.7.5",
+    "redis": "^4.7.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "jest": "^30.0.0",
+    "supertest": "^7.0.0"
   }
 }
