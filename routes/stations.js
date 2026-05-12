@@ -11,8 +11,8 @@ const router = express.Router();
 const stationValidation = [
   body('name').trim().isLength({ min: 2, max: 100 }).withMessage('Name must be 2-100 characters'),
   body('address').trim().isLength({ min: 3, max: 255 }).withMessage('Address must be 3-255 characters'),
-  body('latitude').optional().isFloat({ min: -90, max: 90 }).withMessage('Invalid latitude'),
-  body('longitude').optional().isFloat({ min: -180, max: 180 }).withMessage('Invalid longitude'),
+  body('latitude').optional({ nullable: true }).isFloat({ min: -90, max: 90 }).withMessage('Invalid latitude'),
+  body('longitude').optional({ nullable: true }).isFloat({ min: -180, max: 180 }).withMessage('Invalid longitude'),
 ];
 
 router.get(
@@ -31,11 +31,45 @@ router.get(
   }
 );
 
+router.get('/:id', [param('id').isInt({ min: 1 }).toInt()], validateRequest, cacheMiddleware(120), async (req, res) => {
+  try {
+    const station = await Station.findByPk(req.params.id, {
+      include: [{ model: Bike, attributes: ['id', 'title', 'type', 'status', 'price_per_hour'] }],
+    });
+
+    if (!station) {
+      return res.status(404).json({ error: 'Station not found' });
+    }
+
+    res.json(station);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post('/', authMiddleware, roleMiddleware('admin'), stationValidation, validateRequest, async (req, res) => {
   try {
     const station = await Station.create(req.body);
     await delByPrefix('cache:GET:/stations');
     res.status(201).json(station);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.put('/:id', authMiddleware, roleMiddleware('admin'), [param('id').isInt({ min: 1 }).toInt(), ...stationValidation], validateRequest, async (req, res) => {
+  try {
+    const station = await Station.findByPk(req.params.id);
+
+    if (!station) {
+      return res.status(404).json({ error: 'Station not found' });
+    }
+
+    await station.update(req.body);
+    await delByPrefix('cache:GET:/stations');
+    await delByPrefix('cache:GET:/bikes');
+
+    res.json(station);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -47,6 +81,7 @@ router.delete('/:id', authMiddleware, roleMiddleware('admin'), [param('id').isIn
     if (!deleted) return res.status(404).json({ error: 'Station not found' });
 
     await delByPrefix('cache:GET:/stations');
+    await delByPrefix('cache:GET:/bikes');
     res.json({ message: 'Station deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });

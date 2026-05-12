@@ -1,7 +1,7 @@
 {
   "name": "bike-rental-app",
   "version": "1.0.0",
-  "description": "Bike rental app with Node.js, MySQL, mysql2 and Sequelize",
+  "description": "Final REST API project for bike rental with Node.js, Express, MySQL and Swagger/OpenAPI",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -13,7 +13,10 @@
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "load:test": "artillery run artillery.yml",
-    "start:docker": "docker compose up --build"
+    "start:docker": "docker compose up --build",
+    "db:seed": "node scripts/seed.js",
+    "swagger:json": "node -e \"const swaggerJsdoc=require('swagger-jsdoc'); console.log('Open http://localhost:3000/api-docs/json after server start')\"",
+    "start:prod": "NODE_ENV=production node server.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

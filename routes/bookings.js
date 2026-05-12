@@ -7,6 +7,12 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
+const bookingInclude = [
+  { model: User, attributes: ['id', 'name', 'email'] },
+  { model: Bike, attributes: ['id', 'title', 'type', 'status'] },
+  Payment,
+];
+
 router.get(
   '/',
   authMiddleware,
@@ -24,11 +30,7 @@ router.get(
 
       const bookings = await Booking.findAll({
         where,
-        include: [
-          { model: User, attributes: ['id', 'name', 'email'] },
-          { model: Bike, attributes: ['id', 'title', 'type', 'status'] },
-          Payment,
-        ],
+        include: bookingInclude,
         limit: Number(req.query.limit || 50),
         order: [['id', 'DESC']],
       });
@@ -39,6 +41,24 @@ router.get(
     }
   }
 );
+
+router.get('/:id', authMiddleware, [param('id').isInt({ min: 1 }).toInt()], validateRequest, cacheMiddleware(60), async (req, res) => {
+  try {
+    const booking = await Booking.findByPk(req.params.id, { include: bookingInclude });
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    if (req.user.role !== 'admin' && booking.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    res.json(booking);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 router.post(
   '/',
@@ -56,13 +76,8 @@ router.post(
       const user_id = req.user.role === 'admin' && req.body.user_id ? req.body.user_id : req.user.id;
 
       const bike = await Bike.findByPk(bike_id);
-      if (!bike) {
-        return res.status(404).json({ error: 'Bike not found' });
-      }
-
-      if (bike.status !== 'available') {
-        return res.status(400).json({ error: 'Bike is not available for booking' });
-      }
+      if (!bike) return res.status(404).json({ error: 'Bike not found' });
+      if (bike.status !== 'available') return res.status(400).json({ error: 'Bike is not available for booking' });
 
       const start = new Date(start_time);
       const end = new Date(end_time);
@@ -95,14 +110,8 @@ router.post(
       await delByPrefix('cache:GET:/bookings');
       await delByPrefix('cache:GET:/bikes');
 
-      const createdBooking = await Booking.findByPk(booking.id, {
-        include: [User, Bike, Payment],
-      });
-
-      res.status(201).json({
-        booking: createdBooking,
-        payment,
-      });
+      const createdBooking = await Booking.findByPk(booking.id, { include: bookingInclude });
+      res.status(201).json({ booking: createdBooking, payment });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -113,16 +122,10 @@ router.put('/:id/status', authMiddleware, [param('id').isInt({ min: 1 }).toInt()
   try {
     const booking = await Booking.findByPk(req.params.id, { include: Bike });
 
-    if (!booking) {
-      return res.status(404).json({ error: 'Booking not found' });
-    }
-
-    if (req.user.role !== 'admin' && booking.user_id !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (req.user.role !== 'admin' && booking.user_id !== req.user.id) return res.status(403).json({ error: 'Access denied' });
 
     const { status } = req.body;
-
     await booking.update({ status });
 
     if (status === 'completed' || status === 'cancelled') {
@@ -131,9 +134,32 @@ router.put('/:id/status', authMiddleware, [param('id').isInt({ min: 1 }).toInt()
 
     await delByPrefix('cache:GET:/bookings');
     await delByPrefix('cache:GET:/bikes');
-    res.json(booking);
+
+    const updatedBooking = await Booking.findByPk(req.params.id, { include: bookingInclude });
+    res.json(updatedBooking);
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+router.delete('/:id', authMiddleware, [param('id').isInt({ min: 1 }).toInt()], validateRequest, async (req, res) => {
+  try {
+    const booking = await Booking.findByPk(req.params.id, { include: Bike });
+
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (req.user.role !== 'admin' && booking.user_id !== req.user.id) return res.status(403).json({ error: 'Access denied' });
+
+    if (booking.Bike && booking.status !== 'completed') {
+      await booking.Bike.update({ status: 'available' });
+    }
+
+    await booking.destroy();
+    await delByPrefix('cache:GET:/bookings');
+    await delByPrefix('cache:GET:/bikes');
+
+    res.json({ message: 'Booking deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

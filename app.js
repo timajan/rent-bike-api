@@ -49,6 +49,11 @@ app.get('/', (req, res) => {
   });
 });
 
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
 app.use('/api-docs', swaggerRoutes);
 app.use('/auth', authRoutes);
 app.use('/bikes', bikeRoutes);
